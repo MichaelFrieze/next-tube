@@ -47,7 +47,7 @@ const VideosSectionSkeleton = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Array.from({ length: 5 }).map((_, index) => (
+            {Array.from({ length: 1 }).map((_, index) => (
               <TableRow key={index}>
                 <TableCell className="pl-6">
                   <div className="flex items-center gap-4">
@@ -161,14 +161,12 @@ export const VideosSectionSuspense = () => {
                     <TableCell className="truncate text-sm">
                       {format(new Date(video.createdAt), "d MMM yyyy")}
                     </TableCell>
+                    <TableCell className="text-right text-sm">Views</TableCell>
                     <TableCell className="text-right text-sm">
-                      View Count
-                    </TableCell>
-                    <TableCell className="text-right text-sm">
-                      Comment Count
+                      Comments
                     </TableCell>
                     <TableCell className="pr-6 text-right text-sm">
-                      Like Count
+                      Likes
                     </TableCell>
                   </TableRow>
                 </Link>
