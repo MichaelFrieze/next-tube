@@ -24,7 +24,6 @@ export const StudioUploadModal = () => {
   });
 
   const onSuccess = () => {
-    console.log("I am here");
     if (!create.data?.video.id) return;
 
     create.reset();
