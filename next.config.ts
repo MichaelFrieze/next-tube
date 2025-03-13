@@ -9,10 +9,6 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/a/coz94samwc/**",
       },
-      {
-        protocol: "https",
-        hostname: "image.mux.com",
-      },
     ],
   },
   eslint: {
