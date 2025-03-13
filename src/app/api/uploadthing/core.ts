@@ -1,8 +1,8 @@
-import { z } from "zod";
-import { eq, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
-import { UploadThingError, UTApi } from "uploadthing/server";
+import { and, eq } from "drizzle-orm";
 import { createUploadthing, type FileRouter } from "uploadthing/next";
+import { UploadThingError, UTApi } from "uploadthing/server";
+import { z } from "zod";
 
 import { db } from "@/db";
 import { users, videos } from "@/db/schema";

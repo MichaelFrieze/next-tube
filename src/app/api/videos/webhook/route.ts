@@ -1,17 +1,17 @@
-import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
-import { UTApi } from "uploadthing/server";
 import {
   VideoAssetCreatedWebhookEvent,
+  VideoAssetDeletedWebhookEvent,
   VideoAssetErroredWebhookEvent,
   VideoAssetReadyWebhookEvent,
   VideoAssetTrackReadyWebhookEvent,
-  VideoAssetDeletedWebhookEvent,
 } from "@mux/mux-node/resources/webhooks";
+import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import { UTApi } from "uploadthing/server";
 
 import { db } from "@/db";
-import { mux } from "@/lib/mux";
 import { videos } from "@/db/schema";
+import { mux } from "@/lib/mux";
 
 const SIGNING_SECRET = process.env.MUX_WEBHOOK_SECRET!;
 
@@ -81,19 +81,28 @@ export const POST = async (request: Request) => {
       const tempPreviewUrl = `https://image.mux.com/${playbackId}/animated.gif`;
       const duration = data.duration ? Math.round(data.duration * 1000) : 0;
 
+      let thumbnailUrl: string;
+      let thumbnailKey: string;
+      let previewUrl: string;
+      let previewKey: string;
+
       const utapi = new UTApi();
       const [uploadedThumbnail, uploadedPreview] =
         await utapi.uploadFilesFromUrl([tempThumbnailUrl, tempPreviewUrl]);
 
       if (!uploadedThumbnail.data || !uploadedPreview.data) {
-        return new Response("Failed to upload thumbnail or preview", {
-          status: 500,
-        });
-      }
+        console.log("Error uploading thumbnail and preview to UploadThing.");
 
-      const { key: thumbnailKey, appUrl: thumbnailUrl } =
-        uploadedThumbnail.data;
-      const { key: previewKey, appUrl: previewUrl } = uploadedPreview.data;
+        thumbnailUrl = tempThumbnailUrl;
+        thumbnailKey = `mux-thumbnail-key-${playbackId}`;
+        previewUrl = tempPreviewUrl;
+        previewKey = `mux-preview-key-${playbackId}`;
+      } else {
+        thumbnailUrl = uploadedThumbnail.data.appUrl;
+        thumbnailKey = uploadedThumbnail.data.key;
+        previewUrl = uploadedPreview.data.appUrl;
+        previewKey = uploadedPreview.data.key;
+      }
 
       await db
         .update(videos)
@@ -135,6 +144,37 @@ export const POST = async (request: Request) => {
       }
 
       console.log("Deleting video: ", { uploadId: data.upload_id });
+
+      // Delete thumbnails and preview from UploadThing
+      const [existingVideo] = await db
+        .select({
+          thumbnailKey: videos.thumbnailKey,
+          previewKey: videos.previewKey,
+        })
+        .from(videos)
+        .where(eq(videos.muxUploadId, data.upload_id));
+
+      if (!existingVideo) throw new Error("Video not found");
+
+      if (
+        existingVideo.thumbnailKey &&
+        !existingVideo.thumbnailKey.startsWith("mux-thumbnail-key-")
+      ) {
+        console.log("Deleting thumbnail from UploadThing");
+
+        const utapi = new UTApi();
+        await utapi.deleteFiles(existingVideo.thumbnailKey);
+      }
+
+      if (
+        existingVideo.previewKey &&
+        !existingVideo.previewKey.startsWith("mux-preview-key-")
+      ) {
+        console.log("Deleting preview from UploadThing");
+
+        const utapi = new UTApi();
+        await utapi.deleteFiles(existingVideo.previewKey);
+      }
 
       await db.delete(videos).where(eq(videos.muxUploadId, data.upload_id));
       break;
