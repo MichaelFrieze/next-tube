@@ -139,33 +139,25 @@ export const POST = async (request: Request) => {
 
       console.log("Deleting video: ", { uploadId: data.upload_id });
 
-      // Delete thumbnails and preview from UploadThing
-      const [existingVideo] = await db
-        .select({
-          thumbnailKey: videos.thumbnailKey,
-          previewKey: videos.previewKey,
-        })
-        .from(videos)
-        .where(eq(videos.muxUploadId, data.upload_id));
+      const [removedVideo] = await db
+        .delete(videos)
+        .where(eq(videos.muxUploadId, data.upload_id))
+        .returning();
 
-      if (!existingVideo)
-        throw new Error(
-          "Can't delete thumbnail and preview from UploadThing in the videos webhook: No thumbnail key or preview key found for existing video",
-        );
-
-      console.log("Deleting thumbnail from UploadThing");
+      if (!removedVideo) {
+        break;
+      }
 
       const utapi = new UTApi();
 
-      if (existingVideo.thumbnailKey) {
-        await utapi.deleteFiles(existingVideo.thumbnailKey);
+      if (removedVideo.thumbnailKey) {
+        await utapi.deleteFiles(removedVideo.thumbnailKey);
       }
 
-      if (existingVideo.previewKey) {
-        await utapi.deleteFiles(existingVideo.previewKey);
+      if (removedVideo.previewKey) {
+        await utapi.deleteFiles(removedVideo.previewKey);
       }
 
-      await db.delete(videos).where(eq(videos.muxUploadId, data.upload_id));
       break;
     }
 
