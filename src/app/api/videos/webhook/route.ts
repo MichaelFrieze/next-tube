@@ -86,9 +86,20 @@ export const POST = async (request: Request) => {
         await utapi.uploadFilesFromUrl([tempThumbnailUrl, tempPreviewUrl]);
 
       if (!uploadedThumbnail.data || !uploadedPreview.data) {
-        return new Response("Failed to upload thumbnail or preview", {
-          status: 500,
-        });
+        await db
+          .update(videos)
+          .set({
+            muxStatus: data.status,
+            muxPlaybackId: playbackId,
+            muxAssetId: data.id,
+            thumbnailUrl: null,
+            thumbnailKey: null,
+            previewUrl: null,
+            previewKey: null,
+            duration,
+          })
+          .where(eq(videos.muxUploadId, data.upload_id));
+        break;
       }
 
       const { key: thumbnailKey, appUrl: thumbnailUrl } =

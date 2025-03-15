@@ -22,36 +22,52 @@ export const videosRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      if (existingVideo.thumbnailKey) {
-        const utapi = new UTApi();
+      const utapi = new UTApi();
 
+      if (existingVideo.thumbnailKey) {
         await utapi.deleteFiles(existingVideo.thumbnailKey);
-        await db
-          .update(videos)
-          .set({ thumbnailKey: null, thumbnailUrl: null })
-          .where(and(eq(videos.id, input.id), eq(videos.userId, userId)));
       }
+
+      if (existingVideo.previewKey) {
+        await utapi.deleteFiles(existingVideo.previewKey);
+      }
+
+      await db
+        .update(videos)
+        .set({ thumbnailKey: null, thumbnailUrl: null })
+        .where(and(eq(videos.id, input.id), eq(videos.userId, userId)));
 
       if (!existingVideo.muxPlaybackId) {
         throw new TRPCError({ code: "BAD_REQUEST" });
       }
 
-      const utapi = new UTApi();
-
       const tempThumbnailUrl = `https://image.mux.com/${existingVideo.muxPlaybackId}/thumbnail.jpg`;
-      const uploadedThumbnail =
-        await utapi.uploadFilesFromUrl(tempThumbnailUrl);
+      const tempPreviewUrl = `https://image.mux.com/${existingVideo.muxPlaybackId}/animated.gif`;
+      const [uploadedThumbnail, uploadedPreview] =
+        await utapi.uploadFilesFromUrl([tempThumbnailUrl, tempPreviewUrl]);
 
-      if (!uploadedThumbnail.data) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!uploadedThumbnail.data || !uploadedPreview.data) {
+        const [updatedVideo] = await db
+          .update(videos)
+          .set({
+            thumbnailUrl: null,
+            thumbnailKey: null,
+            previewUrl: null,
+            previewKey: null,
+          })
+          .where(and(eq(videos.id, input.id), eq(videos.userId, userId)))
+          .returning();
+
+        return updatedVideo;
       }
 
       const { key: thumbnailKey, appUrl: thumbnailUrl } =
         uploadedThumbnail.data;
+      const { key: previewKey, appUrl: previewUrl } = uploadedPreview.data;
 
       const [updatedVideo] = await db
         .update(videos)
-        .set({ thumbnailUrl, thumbnailKey })
+        .set({ thumbnailUrl, thumbnailKey, previewUrl, previewKey })
         .where(and(eq(videos.id, input.id), eq(videos.userId, userId)))
         .returning();
 
@@ -75,12 +91,16 @@ export const videosRouter = createTRPCRouter({
 
       const utapi = new UTApi();
 
-      if (removedVideo.thumbnailKey && removedVideo.previewKey) {
+      if (removedVideo.thumbnailKey) {
         await utapi.deleteFiles(removedVideo.thumbnailKey);
       }
 
       if (removedVideo.previewKey) {
         await utapi.deleteFiles(removedVideo.previewKey);
+      }
+
+      if (!removedVideo.thumbnailKey || !removedVideo.previewKey) {
+        console.log("=== Thumbnail or preview key is missing ===");
       }
 
       return removedVideo;
