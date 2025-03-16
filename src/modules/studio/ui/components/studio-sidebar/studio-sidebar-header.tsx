@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   SidebarHeader,
   SidebarMenuButton,
@@ -10,10 +11,15 @@ import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 
 export const StudioSidebarHeader = () => {
-  const { user } = useUser();
+  const [isMounted, setIsMounted] = useState(false);
+  const { isLoaded, isSignedIn, user } = useUser();
   const { state } = useSidebar();
 
-  if (!user) {
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted || !isLoaded) {
     return (
       <SidebarHeader className="flex items-center justify-center pb-4">
         <Skeleton className="size-[112px] rounded-full" />
@@ -25,6 +31,9 @@ export const StudioSidebarHeader = () => {
     );
   }
 
+  if (!isSignedIn) return null;
+
+  // Rest of your component logic using user
   if (state === "collapsed") {
     return (
       <SidebarMenuItem>
