@@ -223,6 +223,7 @@ export const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => remove.mutate({ id: videoId })}
+                    disabled={remove.isPending}
                   >
                     <TrashIcon className="mr-2 size-4" />
                     Delete
@@ -315,6 +316,7 @@ export const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
                               onClick={() =>
                                 restoreThumbnail.mutate({ id: videoId })
                               }
+                              disabled={restoreThumbnail.isPending}
                             >
                               <RotateCcwIcon className="mr-1 size-4" />
                               Restore
