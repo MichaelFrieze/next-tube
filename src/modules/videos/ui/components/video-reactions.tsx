@@ -1,42 +1,61 @@
+import { toast } from "sonner";
+import { useClerk } from "@clerk/nextjs";
 import { ThumbsDownIcon, ThumbsUpIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { trpc } from "@/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+
+import { VideoGetOneOutput } from "../../types";
 
 interface VideoReactionsProps {
   videoId: string;
   likes: number;
   dislikes: number;
-  // viewerReaction: VideoGetOneOutput["viewerReaction"];
+  viewerReaction: VideoGetOneOutput["viewerReaction"];
 }
 
 export const VideoReactions = ({
   videoId,
   likes,
   dislikes,
-  // viewerReaction,
+  viewerReaction,
 }: VideoReactionsProps) => {
-  console.log("videoId", videoId);
-  let viewerReaction: "like" | "dislike" | null = null;
+  const clerk = useClerk();
+  const utils = trpc.useUtils();
 
-  if (likes > dislikes) {
-    viewerReaction = "like";
-  }
+  const like = trpc.videoReactions.like.useMutation({
+    onSuccess: () => {
+      utils.videos.getOne.invalidate({ id: videoId });
+    },
+    onError: (error) => {
+      toast.error("Something went wrong");
 
-  if (dislikes > likes) {
-    viewerReaction = "dislike";
-  }
+      if (error.data?.code === "UNAUTHORIZED") {
+        clerk.openSignIn();
+      }
+    },
+  });
 
-  if (likes === dislikes) {
-    viewerReaction = null;
-  }
+  const dislike = trpc.videoReactions.dislike.useMutation({
+    onSuccess: () => {
+      utils.videos.getOne.invalidate({ id: videoId });
+    },
+    onError: (error) => {
+      toast.error("Something went wrong");
+
+      if (error.data?.code === "UNAUTHORIZED") {
+        clerk.openSignIn();
+      }
+    },
+  });
 
   return (
     <div className="flex flex-none items-center">
       <Button
-        onClick={() => {}}
-        disabled={false}
+        onClick={() => like.mutate({ videoId })}
+        disabled={like.isPending || dislike.isPending}
         variant="secondary"
         className="gap-2 rounded-l-full rounded-r-none pr-4"
       >
@@ -47,8 +66,8 @@ export const VideoReactions = ({
       </Button>
       <Separator orientation="vertical" className="h-7" />
       <Button
-        onClick={() => {}}
-        disabled={false}
+        onClick={() => dislike.mutate({ videoId })}
+        disabled={like.isPending || dislike.isPending}
         variant="secondary"
         className="rounded-l-none rounded-r-full pl-3"
       >
