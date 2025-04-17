@@ -4,7 +4,6 @@ import { baseProcedure, createTRPCRouter } from "@/trpc/init";
 
 export const categoriesRouter = createTRPCRouter({
   getMany: baseProcedure.query(async () => {
-    // await new Promise((resolve) => setTimeout(resolve, 2000));
     const data = await db.select().from(categories);
 
     return data;

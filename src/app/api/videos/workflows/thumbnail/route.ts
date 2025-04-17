@@ -77,7 +77,7 @@ export const { POST } = serve(async (context) => {
       .update(videos)
       .set({
         thumbnailKey: uploadedThumbnail.key,
-        thumbnailUrl: uploadedThumbnail.appUrl,
+        thumbnailUrl: uploadedThumbnail.url,
       })
       .where(and(eq(videos.id, video.id), eq(videos.userId, video.userId)));
   });

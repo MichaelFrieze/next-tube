@@ -1,7 +1,16 @@
 "use client";
 
-import { InfiniteScroll } from "@/components/infinite-scroll";
+import Link from "next/link";
+import { Suspense } from "react";
+import { format } from "date-fns";
+import { Globe2Icon, LockIcon } from "lucide-react";
+import { ErrorBoundary } from "react-error-boundary";
+
+import { trpc } from "@/trpc/client";
+import { DEFAULT_LIMIT } from "@/constants";
+import { snakeCaseToTitle } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InfiniteScroll } from "@/components/infinite-scroll";
 import {
   Table,
   TableBody,
@@ -10,15 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DEFAULT_LIMIT } from "@/constants";
-import { snakeCaseToTitle } from "@/lib/utils";
+
 import { VideoThumbnail } from "@/modules/videos/ui/components/video-thumbnail";
-import { trpc } from "@/trpc/client";
-import { format } from "date-fns";
-import { Globe2Icon, LockIcon } from "lucide-react";
-import Link from "next/link";
-import { Suspense } from "react";
-import { ErrorBoundary } from "react-error-boundary";
 
 export const VideosSection = () => {
   return (
@@ -47,7 +49,7 @@ const VideosSectionSkeleton = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Array.from({ length: 1 }).map((_, index) => (
+            {Array.from({ length: 5 }).map((_, index) => (
               <TableRow key={index}>
                 <TableCell className="pl-6">
                   <div className="flex items-center gap-4">
@@ -85,7 +87,7 @@ const VideosSectionSkeleton = () => {
   );
 };
 
-export const VideosSectionSuspense = () => {
+const VideosSectionSuspense = () => {
   const [videos, query] = trpc.studio.getMany.useSuspenseInfiniteQuery(
     {
       limit: DEFAULT_LIMIT,
@@ -143,14 +145,12 @@ export const VideosSectionSuspense = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center">
-                        <div className="flex items-center">
-                          {video.visibility === "private" ? (
-                            <LockIcon className="mr-2 size-4" />
-                          ) : (
-                            <Globe2Icon className="mr-2 size-4" />
-                          )}
-                          {snakeCaseToTitle(video.visibility)}
-                        </div>
+                        {video.visibility === "private" ? (
+                          <LockIcon className="mr-2 size-4" />
+                        ) : (
+                          <Globe2Icon className="mr-2 size-4" />
+                        )}
+                        {snakeCaseToTitle(video.visibility)}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -161,12 +161,14 @@ export const VideosSectionSuspense = () => {
                     <TableCell className="truncate text-sm">
                       {format(new Date(video.createdAt), "d MMM yyyy")}
                     </TableCell>
-                    <TableCell className="text-right text-sm">Views</TableCell>
                     <TableCell className="text-right text-sm">
-                      Comments
+                      {video.viewCount}
+                    </TableCell>
+                    <TableCell className="text-right text-sm">
+                      {video.commentCount}
                     </TableCell>
                     <TableCell className="pr-6 text-right text-sm">
-                      Likes
+                      {video.likeCount}
                     </TableCell>
                   </TableRow>
                 </Link>

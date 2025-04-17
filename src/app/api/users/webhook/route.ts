@@ -1,9 +1,10 @@
 import { Webhook } from "svix";
+import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
+
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
   const SIGNING_SECRET = process.env.CLERK_SIGNING_SECRET;
@@ -51,28 +52,11 @@ export async function POST(req: Request) {
   }
 
   // Do something with payload
+  // For this guide, log payload to console
   const eventType = evt.type;
 
   if (eventType === "user.created") {
     const { data } = evt;
-
-    if (!data.first_name || !data.last_name) {
-      return new Response("Error: Missing name", {
-        status: 400,
-      });
-    }
-
-    if (!data.image_url) {
-      return new Response("Error: Missing image url", {
-        status: 400,
-      });
-    }
-
-    if (!data.id) {
-      return new Response("Missing user id", {
-        status: 400,
-      });
-    }
 
     await db.insert(users).values({
       clerkId: data.id,
@@ -85,9 +69,7 @@ export async function POST(req: Request) {
     const { data } = evt;
 
     if (!data.id) {
-      return new Response("Missing user id", {
-        status: 400,
-      });
+      return new Response("Missing user id", { status: 400 });
     }
 
     await db.delete(users).where(eq(users.clerkId, data.id));
@@ -95,24 +77,6 @@ export async function POST(req: Request) {
 
   if (eventType === "user.updated") {
     const { data } = evt;
-
-    if (!data.first_name || !data.last_name) {
-      return new Response("Error: Missing name", {
-        status: 400,
-      });
-    }
-
-    if (!data.image_url) {
-      return new Response("Error: Missing image url", {
-        status: 400,
-      });
-    }
-
-    if (!data.id) {
-      return new Response("Missing user id", {
-        status: 400,
-      });
-    }
 
     await db
       .update(users)

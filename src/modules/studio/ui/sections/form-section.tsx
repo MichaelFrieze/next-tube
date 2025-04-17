@@ -1,35 +1,13 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
-import { videoUpdateSchema } from "@/db/schema";
-import { snakeCaseToTitle } from "@/lib/utils";
-import { THUMBNAIL_FALLBACK } from "@/modules/videos/constants";
-import { VideoPlayer } from "@/modules/videos/ui/components/video-player";
-import { trpc } from "@/trpc/client";
+import { z } from "zod";
+import Link from "next/link";
+import { toast } from "sonner";
+import Image from "next/image";
+import { useForm } from "react-hook-form";
+import { Suspense, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ErrorBoundary } from "react-error-boundary";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   CopyCheckIcon,
@@ -43,16 +21,42 @@ import {
   SparklesIcon,
   TrashIcon,
 } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Suspense, useState } from "react";
-import { ErrorBoundary } from "react-error-boundary";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
-import { ThumbnailGenerateModal } from "../components/thumbnail-generate-modal";
+
+import { trpc } from "@/trpc/client";
+import { Input } from "@/components/ui/input";
+import { snakeCaseToTitle } from "@/lib/utils";
+import { videoUpdateSchema } from "@/db/schema";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormLabel,
+  FormMessage,
+  FormItem,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import { APP_URL } from "@/constants";
+import { THUMBNAIL_FALLBACK } from "@/modules/videos/constants";
+import { VideoPlayer } from "@/modules/videos/ui/components/video-player";
+
 import { ThumbnailUploadModal } from "../components/thumbnail-upload-modal";
+import { ThumbnailGenerateModal } from "../components/thumbnail-generate-modal";
 
 interface FormSectionProps {
   videoId: string;
@@ -125,7 +129,7 @@ export const FormSectionSkeleton = () => {
   );
 };
 
-export const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
+const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
   const router = useRouter();
   const utils = trpc.useUtils();
 
@@ -158,6 +162,17 @@ export const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
     },
   });
 
+  const revalidate = trpc.videos.revalidate.useMutation({
+    onSuccess: () => {
+      utils.studio.getMany.invalidate();
+      utils.studio.getOne.invalidate({ id: videoId });
+      toast.success("Video revalidated");
+    },
+    onError: () => {
+      toast.error("Something went wrong");
+    },
+  });
+
   const generateDescription = trpc.videos.generateDescription.useMutation({
     onSuccess: () => {
       toast.success("Background job started", {
@@ -168,7 +183,6 @@ export const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
       toast.error("Something went wrong");
     },
   });
-
   const generateTitle = trpc.videos.generateTitle.useMutation({
     onSuccess: () => {
       toast.success("Background job started", {
@@ -200,8 +214,7 @@ export const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
     update.mutate(data);
   };
 
-  const fullUrl = `${process.env.VERCEL_URL || "http://localhost:3000"}/videos/${videoId}`;
-
+  const fullUrl = `${APP_URL}/videos/${videoId}`;
   const [isCopied, setIsCopied] = useState(false);
 
   const onCopy = async () => {
@@ -248,13 +261,14 @@ export const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => {}}>
+                  <DropdownMenuItem
+                    onClick={() => revalidate.mutate({ id: videoId })}
+                  >
                     <RotateCcwIcon className="mr-2 size-4" />
                     Revalidate
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => remove.mutate({ id: videoId })}
-                    disabled={remove.isPending}
                   >
                     <TrashIcon className="mr-2 size-4" />
                     Delete
@@ -385,7 +399,6 @@ export const FormSectionSuspense = ({ videoId }: FormSectionProps) => {
                               onClick={() =>
                                 restoreThumbnail.mutate({ id: videoId })
                               }
-                              disabled={restoreThumbnail.isPending}
                             >
                               <RotateCcwIcon className="mr-1 size-4" />
                               Restore

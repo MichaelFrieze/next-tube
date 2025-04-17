@@ -4,6 +4,8 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-export default function Layout({ children }: LayoutProps) {
+const Layout = ({ children }: LayoutProps) => {
   return <StudioLayout>{children}</StudioLayout>;
-}
+};
+
+export default Layout;

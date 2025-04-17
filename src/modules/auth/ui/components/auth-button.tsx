@@ -1,44 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ClapperboardIcon, UserCircleIcon, UserIcon } from "lucide-react";
+import { UserButton, SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
+
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  SignInButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-  useAuth,
-} from "@clerk/nextjs";
-import { ClapperboardIcon, UserCircleIcon } from "lucide-react";
 
 export const AuthButton = () => {
-  const [isMounted, setIsMounted] = useState(false);
-  const { isLoaded } = useAuth();
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted || !isLoaded) {
-    return <Skeleton className="h-7 w-7 rounded-full" />;
-  }
-
   return (
     <>
       <SignedIn>
-        <div className="h-7 w-7">
-          <UserButton>
-            <UserButton.MenuItems>
-              <UserButton.Link
-                label="Studio"
-                href="/studio"
-                labelIcon={<ClapperboardIcon className="size-4" />}
-              />
-              <UserButton.Action label="manageAccount" />
-            </UserButton.MenuItems>
-          </UserButton>
-        </div>
+        <UserButton>
+          <UserButton.MenuItems>
+            <UserButton.Link
+              label="My profile"
+              href="/users/current"
+              labelIcon={<UserIcon className="size-4" />}
+            />
+            <UserButton.Link
+              label="Studio"
+              href="/studio"
+              labelIcon={<ClapperboardIcon className="size-4" />}
+            />
+            <UserButton.Action label="manageAccount" />
+          </UserButton.MenuItems>
+        </UserButton>
       </SignedIn>
       <SignedOut>
         <SignInButton mode="modal">

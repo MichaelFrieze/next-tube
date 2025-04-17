@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth, useClerk } from "@clerk/nextjs";
 import { FlameIcon, HomeIcon, PlaySquareIcon } from "lucide-react";
-import Link from "next/link";
 
 import {
   SidebarGroup,
@@ -19,8 +20,8 @@ const items = [
     icon: HomeIcon,
   },
   {
-    title: "Subscriptions",
-    url: "/feed/subscriptions",
+    title: "Subscribed",
+    url: "/feed/subscribed",
     icon: PlaySquareIcon,
     auth: true,
   },
@@ -34,6 +35,7 @@ const items = [
 export const MainSection = () => {
   const clerk = useClerk();
   const { isSignedIn } = useAuth();
+  const pathname = usePathname();
 
   return (
     <SidebarGroup>
@@ -44,7 +46,7 @@ export const MainSection = () => {
               <SidebarMenuButton
                 tooltip={item.title}
                 asChild
-                isActive={false} // TODO: Change to look at current pathname
+                isActive={pathname === item.url}
                 onClick={(e) => {
                   if (!isSignedIn && item.auth) {
                     e.preventDefault();
@@ -52,7 +54,11 @@ export const MainSection = () => {
                   }
                 }}
               >
-                <Link href={item.url} className="flex items-center gap-4">
+                <Link
+                  prefetch
+                  href={item.url}
+                  className="flex items-center gap-4"
+                >
                   <item.icon />
                   <span className="text-sm">{item.title}</span>
                 </Link>

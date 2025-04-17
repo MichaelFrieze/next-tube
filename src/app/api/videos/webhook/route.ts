@@ -1,17 +1,17 @@
-import {
-  VideoAssetCreatedWebhookEvent,
-  VideoAssetDeletedWebhookEvent,
-  VideoAssetErroredWebhookEvent,
-  VideoAssetReadyWebhookEvent,
-  VideoAssetTrackReadyWebhookEvent,
-} from "@mux/mux-node/resources/webhooks";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { UTApi } from "uploadthing/server";
+import {
+  VideoAssetCreatedWebhookEvent,
+  VideoAssetErroredWebhookEvent,
+  VideoAssetReadyWebhookEvent,
+  VideoAssetTrackReadyWebhookEvent,
+  VideoAssetDeletedWebhookEvent,
+} from "@mux/mux-node/resources/webhooks";
 
 import { db } from "@/db";
-import { videos } from "@/db/schema";
 import { mux } from "@/lib/mux";
+import { videos } from "@/db/schema";
 
 const SIGNING_SECRET = process.env.MUX_WEBHOOK_SECRET!;
 
@@ -86,25 +86,13 @@ export const POST = async (request: Request) => {
         await utapi.uploadFilesFromUrl([tempThumbnailUrl, tempPreviewUrl]);
 
       if (!uploadedThumbnail.data || !uploadedPreview.data) {
-        await db
-          .update(videos)
-          .set({
-            muxStatus: data.status,
-            muxPlaybackId: playbackId,
-            muxAssetId: data.id,
-            thumbnailUrl: null,
-            thumbnailKey: null,
-            previewUrl: null,
-            previewKey: null,
-            duration,
-          })
-          .where(eq(videos.muxUploadId, data.upload_id));
-        break;
+        return new Response("Failed to upload thumbnail or preview", {
+          status: 500,
+        });
       }
 
-      const { key: thumbnailKey, appUrl: thumbnailUrl } =
-        uploadedThumbnail.data;
-      const { key: previewKey, appUrl: previewUrl } = uploadedPreview.data;
+      const { key: thumbnailKey, url: thumbnailUrl } = uploadedThumbnail.data;
+      const { key: previewKey, url: previewUrl } = uploadedPreview.data;
 
       await db
         .update(videos)
@@ -142,33 +130,12 @@ export const POST = async (request: Request) => {
       const data = payload.data as VideoAssetDeletedWebhookEvent["data"];
 
       if (!data.upload_id) {
-        return new Response(
-          "Can't delete video using videos webhook: Missing upload ID",
-          { status: 400 },
-        );
+        return new Response("Missing upload ID", { status: 400 });
       }
 
       console.log("Deleting video: ", { uploadId: data.upload_id });
 
-      const [removedVideo] = await db
-        .delete(videos)
-        .where(eq(videos.muxUploadId, data.upload_id))
-        .returning();
-
-      if (!removedVideo) {
-        break;
-      }
-
-      const utapi = new UTApi();
-
-      if (removedVideo.thumbnailKey) {
-        await utapi.deleteFiles(removedVideo.thumbnailKey);
-      }
-
-      if (removedVideo.previewKey) {
-        await utapi.deleteFiles(removedVideo.previewKey);
-      }
-
+      await db.delete(videos).where(eq(videos.muxUploadId, data.upload_id));
       break;
     }
 

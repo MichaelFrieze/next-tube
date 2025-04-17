@@ -1,48 +1,40 @@
-import { useEffect, useState } from "react";
-import {
-  SidebarHeader,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
+import Link from "next/link";
+import { useUser } from "@clerk/nextjs";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserAvatar } from "@/components/user-avatar";
-import { useUser } from "@clerk/nextjs";
-import Link from "next/link";
+import {
+  SidebarHeader,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  useSidebar,
+} from "@/components/ui/sidebar";
 
 export const StudioSidebarHeader = () => {
-  const [isMounted, setIsMounted] = useState(false);
-  const { isLoaded, isSignedIn, user } = useUser();
+  const { user } = useUser();
   const { state } = useSidebar();
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted || !isLoaded) {
+  if (!user) {
     return (
       <SidebarHeader className="flex items-center justify-center pb-4">
         <Skeleton className="size-[112px] rounded-full" />
-        <div className="mt-2 flex flex-col items-center gap-y-1">
-          <Skeleton className="h-5 w-[80px]" />
+        <div className="mt-2 flex flex-col items-center gap-y-2">
+          <Skeleton className="h-4 w-[80px]" />
           <Skeleton className="h-4 w-[100px]" />
         </div>
       </SidebarHeader>
     );
   }
 
-  if (!isSignedIn) return null;
-
-  // Rest of your component logic using user
   if (state === "collapsed") {
     return (
       <SidebarMenuItem>
-        <SidebarMenuButton tooltip={"Your profile"} asChild>
-          <Link href="/users/current">
+        <SidebarMenuButton tooltip="Your profile" asChild>
+          <Link prefetch href="/users/current">
             <UserAvatar
               imageUrl={user.imageUrl}
               name={user.fullName ?? "User"}
-              size={"xs"}
+              size="xs"
             />
             <span className="text-sm">Your profile</span>
           </Link>
@@ -53,7 +45,7 @@ export const StudioSidebarHeader = () => {
 
   return (
     <SidebarHeader className="flex items-center justify-center pb-4">
-      <Link href={"/users/current"}>
+      <Link prefetch href="/users/current">
         <UserAvatar
           imageUrl={user.imageUrl}
           name={user.fullName ?? "User"}
